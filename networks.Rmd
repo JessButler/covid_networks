@@ -58,7 +58,7 @@ table_case_summary <-
 calculate_networks <-
   function(cases_and_contacts) {
     
-#calculate network graph for two weeks' cases and contacts using igraph
+#calculate network graph for cases and contacts using igraph
 network_graph <- 
   graph_from_data_frame(cases_and_contacts, directed = F)
 
