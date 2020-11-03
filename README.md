@@ -10,7 +10,7 @@ A PDF plot of each network
 Summary table of network membership and growth over time  
 Summary table about cases and contacts
 
-### Example
+#### Example
 All code is in **networks.Rmd**  
 Example input is **cases_contacts_20201001.csv**  
 Example outputs are in **outputs** folder
