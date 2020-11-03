@@ -1,0 +1,239 @@
+# Network Analysis for Track and Trace
+
+# Libraries
+```{r, message = F}
+#load libraries
+library(tidyverse)
+library(here)
+library(lubridate)
+library(igraph)
+library(ggraph)
+```
+
+# Load Contact Data and Tidy
+```{r, message = F}
+#input file name
+input_file <- "cases_contacts_20201001.csv"
+
+#input contact data into dataframe and tidy
+contacts_data <-
+  read_delim(input_file, delim = ",") %>%  #change delimiter type here
+  mutate(
+    date = dmy(date),   #assumes day, month, year date format
+    contact_is_case = 
+      ifelse(str_detect(contact, "CS"), 1, 0),  #flag case from string
+    contact_type =
+      case_when(
+        str_detect(contact_type, "Non-Resident") ~ "non-household",
+        str_detect(contact_type, "Resident") ~ "household",
+        str_detect(contact_type, "Non-Household") ~ "non-household",
+        str_detect(contact_type, "Household") ~ "household"
+      )
+  )
+```
+
+# Summarise Cases
+```{r, message = F}
+#dataframe with summary data for each case
+#counts contacts as cases, household or non-household based on string searches
+
+table_case_summary <-
+  contacts_data %>%
+  group_by(case) %>%
+  summarise(
+    date = max(date),
+    n_contacts = n(),
+    n_contacts_cases = sum(contact_is_case),
+    n_contacts_non_household_cases = sum(contact_is_case &
+                                           contact_type == "non-household"),
+    n_household_contacts = sum(contact_type == "household"),
+    n_non_household_contacts = sum(contact_type == "non-household"),
+    contact_ids = paste(contact, collapse = ", ")
+  )
+```
+
+# Function for Finding Networks
+```{r}
+
+calculate_networks <-
+  function(cases_and_contacts) {
+    
+#calculate network graph for two weeks' cases and contacts using igraph
+network_graph <- 
+  graph_from_data_frame(cases_and_contacts, directed = F)
+
+#find all cases and contacts that group together with no connections to others
+network_groups <- 
+  groups(components(network_graph))
+
+#dataframe with one row per network member id
+network_members <-
+  tibble(network_groups) %>%  #make igraph's list of lists into a dataframe
+  unnest_wider(network_groups) %>%  #unpack concatenated network member ids
+  mutate(network_id = row_number()) %>% 
+  pivot_longer(cols = -network_id, values_to = "id") %>%  #make data long
+  filter(!is.na(id)) %>%  #remove NAs
+  select(-name)
+
+#find the earliest case in each network
+earliest_case_in_network <-
+  network_members %>%
+  filter(str_detect(id, "CS")) %>%
+  left_join(., 
+            select(cases_and_contacts, case, date), 
+            by = c("id" = "case")) %>%    #add dates to cases
+  group_by(network_id) %>%
+  slice(which.min(date)) %>%     #select oldest case in group
+  top_n(1, id) 
+
+#add earliest case in network 
+network_members <-
+  network_members %>%
+  left_join(.,
+            earliest_case_in_network,
+            by = "network_id") %>%
+  rename(id = id.x, 
+         earliest_case = id.y, 
+         earliest_case_date = date)
+
+return(network_members)
+  }
+```
+
+# Calculating Networks
+```{r, message = F}
+#run calculate_networks function for most recent case & contact data
+network_members <-
+  calculate_networks(contacts_data)
+
+#find previous case & contact data
+contacts_data_previous <-
+  contacts_data %>%
+  filter(date <= max(date) - 1)
+
+#run calculate_networks function for previous case & contact data
+network_members_previous <-
+  calculate_networks(contacts_data_previous)
+```
+
+# Growing Networks
+```{r, message = F}
+current_network_summary <-
+network_members %>%
+  group_by(earliest_case) %>%
+  summarise(people_today = n()) 
+
+previous_network_summary <-
+network_members_previous %>%
+  group_by(earliest_case) %>%
+  summarise(people_yesterday = n())
+
+network_summary <-
+  left_join(current_network_summary,
+            previous_network_summary,
+            by = "earliest_case") %>%
+  mutate(people_added_today = people_today - people_yesterday) %>%
+  arrange(desc(people_added_today))
+```
+
+
+#Summarise Networks
+```{r, message = F}
+#add previous network id
+network_members <-
+  full_join(network_members,
+            network_members_previous,
+            by = "id") %>%
+  select(earliest_case.x, earliest_case.y, id) %>%
+  rename(earliest_case_now = earliest_case.x, earliest_case_previous = earliest_case.y) %>%
+  left_join(network_members,
+            .,
+            by = "id")
+
+#add variables about cases (contacts will be NAs)
+network_members <-
+  network_members %>%
+  left_join(., 
+            table_case_summary,
+            by = c("id" = "case"))
+
+#summary about networks
+table_networks_summary <-
+  network_members %>%
+  group_by(earliest_case) %>%
+  summarise(
+    n_members = n(),
+    n_new_to_network_today = sum(is.na(earliest_case_previous)),
+    members = paste(id, collapse = ", "),
+    n_cases = sum(str_count(members, "CS")),
+    max_date = max(date, na.rm = T),
+    min_date = min(date, na.rm = T),
+    days_growing = max_date - min_date,
+    days_since_growth = max(contacts_data$date) - max_date
+    ) %>%
+  rename(earliest_case_in_network = earliest_case, 
+         date_most_recent_case = max_date,
+         date_earliest_case = min_date) %>%
+  select(earliest_case_in_network, n_members, n_cases, n_new_to_network_today, days_growing, days_since_growth, date_most_recent_case, date_earliest_case, members) %>%
+  arrange(days_since_growth, desc(n_cases))
+```
+
+# Write Output
+```{r}
+#write to files
+#this could be changed to write to SQL
+
+write_csv(table_case_summary, 
+          here("outputs", paste(max(contacts_data$date), "case_summary.csv", sep = "_")))
+
+write_csv(table_networks_summary, 
+          here("outputs", paste(max(contacts_data$date), "networks_summary.csv", sep = "_")))
+```
+
+# Plot Function
+```{r, fig.height = 8, fig.width = 11}
+
+#function that plots one network and saves it to "plots" folder in "outputs"
+plot_network <-
+  function(node_of_interest) {
+
+network_graph <- 
+  graph_from_data_frame(contacts_data, directed = F)
+
+#select only the network specified by node_of_interest
+subgraph <-
+  induced.subgraph(graph = network_graph,
+                   vids = unlist(
+                     neighborhood(
+                       graph = network_graph,
+                       order = 2000,
+                       nodes = node_of_interest)))
+
+#layout graph of network
+subgraph %>%
+  ggraph(layout = "fr") +         #use "kk" for alternate layout of nodes
+  geom_node_point(size = 2) +     #change display of nodes
+  geom_edge_link(alpha = 0.6) +   #change display of edges
+  geom_node_text(aes(label = name), size = 4, repel = T)    #change display of node label
+
+#save most recent graph with nodes of interest as filename
+ggsave(
+  filename = 
+    paste("network_plot", paste(node_of_interest, collapse="_"),".pdf", sep = "_"),
+  height = 8, width = 11,       
+  dpi = 1200, 
+  limitsize = FALSE,
+  path = here("outputs", "plots"))
+  }
+```
+
+# Plot All Networks
+```{r}
+#plot and save PDF of each network
+#takes about one second per plot on a laptop
+network_earliest_cases <- table_networks_summary$earliest_case_in_network
+
+for (i in network_earliest_cases) {
+  plot_network(i)
+}
+```

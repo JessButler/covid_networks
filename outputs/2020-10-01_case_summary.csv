@@ -1,0 +1,13 @@
+case,date,n_contacts,n_contacts_cases,n_contacts_non_household_cases,n_household_contacts,n_non_household_contacts,contact_ids
+CS001,2020-09-26,4,1,0,3,1,"Contact001, Contact002, CS003, Contact004"
+CS002,2020-09-28,8,0,0,3,5,"Contact005, Contact006, Contact007, Contact078, Contact009, Contact010, Contact011, Contact012"
+CS003,2020-09-29,2,0,0,1,1,"Contact100, Contact101"
+CS004,2020-09-29,9,0,0,3,6,"Contact102, Contact075, Contact016, Contact017, Contact018, Contact019, Contact020, Contact021, Contact022"
+CS005,2020-10-01,4,2,1,3,1,"Contact045, CS011, Contact056, CS090"
+CS006,2020-10-01,5,0,0,3,2,"Contact016, Contact017, Contact018, Contact019, Contact008"
+CS007,2020-10-01,13,0,0,0,13,"Contact020, Contact021, Contact022, Contact023, Contact024, Contact025, Contact026, Contact027, Contact028, Contact029, Contact030, Contact031, Contact032"
+CS008,2020-09-27,4,2,0,2,2,"CS009, CS010, Contact34, Contact006"
+CS009,2020-09-27,5,2,0,2,3,"CS008, CS010, Contact034, Contact035, Contact036"
+CS011,2020-09-27,4,1,0,1,3,"CS012, Contact037, Contact038, Contact039"
+CS013,2020-10-01,6,2,1,3,3,"CS003, CS014, Contact033, Contact034, Contact035, Contact036"
+CS015,2020-09-25,5,0,0,2,3,"Contact050, Contact051, Contact052, Contact053, Contact054"

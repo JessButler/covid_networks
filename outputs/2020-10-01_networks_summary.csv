@@ -1,0 +1,5 @@
+earliest_case_in_network,n_members,n_cases,n_new_to_network_today,days_growing,days_since_growth,date_most_recent_case,date_earliest_case,members
+CS001,26,8,3,5,0,2020-10-01,2020-09-26,"CS001, CS008, CS009, CS002, CS003, CS013, Contact001, Contact002, Contact004, CS010, Contact34, Contact006, Contact034, Contact035, Contact036, Contact005, Contact007, Contact078, Contact009, Contact010, Contact011, Contact012, Contact100, Contact101, CS014, Contact033"
+CS011,9,4,4,4,0,2020-10-01,2020-09-27,"CS011, CS005, CS012, Contact037, Contact038, Contact039, Contact045, Contact056, CS090"
+CS004,23,3,13,2,0,2020-10-01,2020-09-29,"CS004, CS006, CS007, Contact102, Contact075, Contact016, Contact017, Contact018, Contact019, Contact020, Contact021, Contact022, Contact008, Contact023, Contact024, Contact025, Contact026, Contact027, Contact028, Contact029, Contact030, Contact031, Contact032"
+CS015,6,1,0,0,6,2020-09-25,2020-09-25,"CS015, Contact050, Contact051, Contact052, Contact053, Contact054"
