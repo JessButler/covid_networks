@@ -1,5 +1,7 @@
 # Network Analysis for Track and Trace
 
+# Please create a folder "plots" within a folder "outputs" for writing tables and plots!
+
 # Libraries
 ```{r, message = F}
 #load libraries
