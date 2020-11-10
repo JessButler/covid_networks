@@ -131,9 +131,10 @@ network_members_previous %>%
   summarise(people_yesterday = n())
 
 network_summary <-
-  left_join(current_network_summary,
+  full_join(current_network_summary,
             previous_network_summary,
             by = "earliest_case") %>%
+  replace(is.na(.), 0) %>%
   mutate(people_added_today = people_today - people_yesterday) %>%
   arrange(desc(people_added_today))
 ```
@@ -185,11 +186,11 @@ table_networks_summary <-
 #write to files
 #this could be changed to write to SQL
 
-write_csv(table_case_summary, 
-          here("outputs", paste(max(contacts_data$date), "case_summary.csv", sep = "_")))
+write_csv(table_case_summary,
+          here::here("outputs", paste(max(contacts_data$date), "case_summary.csv", sep = "_")))
 
 write_csv(table_networks_summary, 
-          here("outputs", paste(max(contacts_data$date), "networks_summary.csv", sep = "_")))
+          here::here("outputs", paste(max(contacts_data$date), "networks_summary.csv", sep = "_")))
 ```
 
 # Plot Function
@@ -197,10 +198,7 @@ write_csv(table_networks_summary,
 
 #function that plots one network and saves it to "plots" folder in "outputs"
 plot_network <-
-  function(node_of_interest) {
-
-network_graph <- 
-  graph_from_data_frame(contacts_data, directed = F)
+  function(node_of_interest,network_graph) {
 
 #select only the network specified by node_of_interest
 subgraph <-
@@ -225,7 +223,7 @@ ggsave(
   height = 8, width = 11,       
   dpi = 1200, 
   limitsize = FALSE,
-  path = here("outputs", "plots"))
+  path = here::here("outputs", "plots"))
   }
 ```
 
@@ -235,7 +233,10 @@ ggsave(
 #takes about one second per plot on a laptop
 network_earliest_cases <- table_networks_summary$earliest_case_in_network
 
+network_graph <- 
+  graph_from_data_frame(contacts_data, directed = F)
+
 for (i in network_earliest_cases) {
-  plot_network(i)
+  plot_network(i,network_graph)
 }
 ```
