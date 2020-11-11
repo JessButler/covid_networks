@@ -18,8 +18,22 @@ library(ggraph)
 input_file <- "cases_contacts_20201001.csv"
 
 #input contact data into dataframe and tidy
+contacts_data <- 
+  read_delim(input_file, delim = ",")  #change delimiter type here
+
+#check that contacts_data contains the four columns we need: case, contact, contact_type and date
+columns <- c("case","contact","contact_type","date")
+if(!all(i <- has_name(contacts_data,columns)))
+    stop(sprintf(
+      "The input file is missing column(s) called %s",
+      paste(columns[!i], collapse=", ")))
+
+#check that all variables in the case column start with "CS" 
+if (!all(startsWith(contacts_data$case,"CS")))
+  stop(sprintf("The names of all Cases in the input file should start with CS"))
+
 contacts_data <-
-  read_delim(input_file, delim = ",") %>%  #change delimiter type here
+  contacts_data %>%
   mutate(
     date = dmy(date),   #assumes day, month, year date format
     contact_is_case = 
