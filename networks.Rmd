@@ -23,7 +23,9 @@ contacts_data <-
   mutate(
     date = dmy(date),   #assumes day, month, year date format
     contact_is_case = 
-      ifelse(str_detect(contact, "CS"), 1, 0),  #flag case from string
+      ifelse(str_detect(contact, "CS"), 1, 0),  #flag case from string 
+    contact_color = # NOTE This could be integrated above
+      ifelse(str_detect(contact, "CS"), 1, 0) - as.integer(contact %in% grep("Contact",unique(contact[duplicated(contact)]), value = T)), #(Description from inner brackets to outer) This line checks for duplicated entries in the Contact-column and returns them. Unique() ensure we only get unique values returned, as we only need them ones. And we use grep() to only return the contacts and drop cases from the selection. as.integer() turns our TRUE/FALSE vector for the Contact column into a  0 and 1 vector. (1 = Contact linked to multiple covid cases. 0 = contact linked to one covid case & covid case linked to covid case.). This is subtracted from the ifelse() vector creating the follow classification: -1 = "Contact linked to mulptiple Covid cases", 0 = "Contact linked to one Covid case" & 1 = "Covid case linked to Covid case"  
     contact_type =
       case_when(
         str_detect(contact_type, "Non-Resident") ~ "non-household",
@@ -211,10 +213,24 @@ subgraph <-
 
 #layout graph of network
 subgraph %>%
-  ggraph(layout = "fr") +         #use "kk" for alternate layout of nodes
-  geom_node_point(size = 2) +     #change display of nodes
-  geom_edge_link(alpha = 0.6) +   #change display of edges
-  geom_node_text(aes(label = name), size = 4, repel = T)    #change display of node label
+  ggraph(layout = "fr") + #use "kk" for alternate layout of nodes
+  theme_bw()+
+    theme(legend.position = 'bottom',
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())+
+  geom_edge_link(alpha = 0.6,width=1.2, aes(color = as.factor(contact_color), linetype = as.factor(contact_color))) + #change display of edges. Color and linetype based on Contact_color column
+  scale_edge_color_manual(values = c("-1" = "orange", "0" = "green", "1" = "red"),
+                          name="",
+                          labels=c("Contact linked to mulptiple Covid cases", "Contact linked to one Covid case", "Covid case linked to Covid case"))+ # assign specific color 
+  scale_edge_linetype_manual(values = c("-1" = "solid", "0" = "twodash", "1"= "solid"),
+                          name="",
+                      labels=c("Contact linked to mulptiple Covid cases", "Contact linked to one Covid case", "Covid case linked to Covid case"))+ # assign specific linetype 
+  geom_node_point(size = 2) +     #change display of nodes. Moved it here so the point will be plotted over the lines
+  geom_node_text(aes(label = name), size = 4, repel = T)  
 
 #save most recent graph with nodes of interest as filename
 ggsave(
