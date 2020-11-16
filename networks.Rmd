@@ -79,17 +79,23 @@ network_graph <-
   graph_from_data_frame(cases_and_contacts, directed = F)
 
 #find all cases and contacts that group together with no connections to others
-network_groups <- 
-  groups(components(network_graph))
+network_components <- components(network_graph)
+#One of the network components is "membership", a named numeric list where the names are the cases/contacts and the numbers are the groups
+members <- sort(network_components$membership) #sort by group
+network_members <- data.frame(as.integer(members),names(members),row.names = NULL,stringsAsFactors=FALSE) #convert to dataframe
+colnames(network_members) <- c("network_id", "id") #fix column names
+
+#network_groups <- 
+#  groups(components(network_graph))
 
 #dataframe with one row per network member id
-network_members <-
-  tibble(network_groups) %>%  #make igraph's list of lists into a dataframe
-  unnest_wider(network_groups) %>%  #unpack concatenated network member ids
-  mutate(network_id = row_number()) %>% 
-  pivot_longer(cols = -network_id, values_to = "id") %>%  #make data long
-  filter(!is.na(id)) %>%  #remove NAs
-  select(-name)
+#network_members <-
+#  tibble(network_groups) %>%  #make igraph's list of lists into a dataframe
+#  unnest_wider(network_groups) %>%  #unpack concatenated network member ids
+#  mutate(network_id = row_number()) %>% 
+#  pivot_longer(cols = -network_id, values_to = "id") %>%  #make data long
+#  filter(!is.na(id)) %>%  #remove NAs
+#  select(-name)
 
 #find the earliest case in each network
 earliest_case_in_network <-
