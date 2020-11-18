@@ -15,23 +15,29 @@ library(ggraph)
 # Load Contact Data and Tidy
 ```{r, message = F}
 #input file name
-input_file <- "cases_contacts_20201001.csv"
+input_file <- 
+  "cases_contacts_20201001.csv"
 
 #input contact data into dataframe and tidy
 contacts_data <- 
   read_delim(input_file, delim = ",")  #change delimiter type here
 
-#check that contacts_data contains the four columns we need: case, contact, contact_type and date
+#check that contacts_data has four necessary columns: case, contact, contact_type and date
 columns <- c("case","contact","contact_type","date")
-if(!all(i <- has_name(contacts_data,columns)))
+
+if(!all(i <- has_name(contacts_data, columns)))
     stop(sprintf(
       "The input file is missing column(s) called %s",
-      paste(columns[!i], collapse=", ")))
+      paste(columns[!i], collapse = ", ")))
 
 #check that all variables in the case column start with "CS" 
 if (!all(startsWith(contacts_data$case,"CS")))
-  stop(sprintf("The names of all Cases in the input file should start with CS"))
+  stop(sprintf(
+    "The names of all cases should start with CS"))
 
+#tidy contacts_data
+#create only two categories on contacts: household & non-household
+#flag as case if name includes "CS
 contacts_data <-
   contacts_data %>%
   mutate(
@@ -80,22 +86,19 @@ network_graph <-
 
 #find all cases and contacts that group together with no connections to others
 network_components <- components(network_graph)
+
 #One of the network components is "membership", a named numeric list where the names are the cases/contacts and the numbers are the groups
-members <- sort(network_components$membership) #sort by group
-network_members <- data.frame(as.integer(members),names(members),row.names = NULL,stringsAsFactors=FALSE) #convert to dataframe
-colnames(network_members) <- c("network_id", "id") #fix column names
+members <- 
+  sort(network_components$membership) #sort by group
 
-#network_groups <- 
-#  groups(components(network_graph))
+#convert network id and members to dataframe and tidy names
+network_members <-
+  data_frame(
+    members,
+    names(members)) %>%
+  rename(network_id = members,
+         id = "names(members)")
 
-#dataframe with one row per network member id
-#network_members <-
-#  tibble(network_groups) %>%  #make igraph's list of lists into a dataframe
-#  unnest_wider(network_groups) %>%  #unpack concatenated network member ids
-#  mutate(network_id = row_number()) %>% 
-#  pivot_longer(cols = -network_id, values_to = "id") %>%  #make data long
-#  filter(!is.na(id)) %>%  #remove NAs
-#  select(-name)
 
 #find the earliest case in each network
 earliest_case_in_network <-
@@ -199,6 +202,11 @@ table_networks_summary <-
          date_earliest_case = min_date) %>%
   select(earliest_case_in_network, n_members, n_cases, n_new_to_network_today, days_growing, days_since_growth, date_most_recent_case, date_earliest_case, members) %>%
   arrange(days_since_growth, desc(n_cases))
+
+table_networks_membership <-
+  network_members %>%
+  rename(earliest_case_in_network = earliest_case) %>%
+  select(id, earliest_case_in_network)
 ```
 
 # Write Output
@@ -211,6 +219,9 @@ write_csv(table_case_summary,
 
 write_csv(table_networks_summary, 
           here::here("outputs", paste(max(contacts_data$date), "networks_summary.csv", sep = "_")))
+
+write_csv(table_networks_membership, 
+          here::here("outputs", paste(max(contacts_data$date), "networks_membership.csv", sep = "_")))
 ```
 
 # Plot Function
